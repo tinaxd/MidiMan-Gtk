@@ -53,16 +53,16 @@ void MidimanWindow::on_startbutton_clicked()
     std::cout << "startbutton clicked" << std::endl;
     PianorollWindow *pianoroll = new PianorollWindow();
     MidiNote note = {
-        1, 3, 5
+        96, 1, 0
     };
     MidiNote note2 = {
-        2,4,6
+        100,2,2
     };
     MidiNote note3 = {
-        20,30,50
+        103,3,5
     };
     MidiNote note4 = {
-        30,40,60
+        104,4,8
     };
     pianoroll->add_note(note);
     pianoroll->add_note(note2);

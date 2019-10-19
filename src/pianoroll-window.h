@@ -61,10 +61,7 @@ void add_note(MidiNote note);
 void set_x_scale(double scale);
 void set_y_scale(double scale);
 
-const int white_width = 60;
-const int white_height = 20;
-const int black_width = 25;
-const int black_height = 15;
+void calculate_note_positions();
 
 private:
 // Vector<MidiEvent> midiInfo;
@@ -73,12 +70,17 @@ Gtk::ScrolledWindow *scwindow;
 Gtk::Viewport *viewport;
 
 bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
-std::queue<DrawCord> drawing_queue;
-std::vector<DrawCord> note_drawed;
+//std::queue<DrawCord> drawing_queue;
+
+std::queue<DrawCord> note_drawed;
+std::vector<MidiNote> notes;
+
 bool draw_initialized;
 
 double y_scale = 5.0;
 double x_scale = 5.0;
+
+double key_heights[127];
 
 protected:
 virtual bool on_motion_notify_event(GdkEventMotion *motion_event);
@@ -86,5 +88,15 @@ void draw_note(MidiNote note);
 virtual void update_notes_drawing(const Cairo::RefPtr<Cairo::Context>& cr);
 virtual void draw_keyboard(const Cairo::RefPtr<Cairo::Context>& cr);
 virtual void draw_gridhelper(const Cairo::RefPtr<Cairo::Context>& cr);
+
+double white_width = 60;
+double white_height = 30;
+double black_width = 25;
+double black_height = 20;
+double pianoroll_leftmargin = 5;
+double pianoroll_upmargin = 25;
+
+int measure_division = 4;
+double measure_width = 300;
 };
 
