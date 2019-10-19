@@ -1,0 +1,4 @@
+data/work.tinax.MidiMan.desktop.in
+data/work.tinax.MidiMan.appdata.xml.in
+data/work.tinax.MidiMan.gschema.xml
+src/midiman-window.ui

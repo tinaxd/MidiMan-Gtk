@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=midiman
+Exec=midiman
+Terminal=false
+Type=Application
+Categories=GTK;
+StartupNotify=true
