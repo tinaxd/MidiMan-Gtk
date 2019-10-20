@@ -1,4 +1,4 @@
-/* midiman-window.cpp
+/* pianoroll-window.cpp
  *
  * Copyright 2019 tinaxd
  *
@@ -47,23 +47,21 @@ PianorollWindow::PianorollWindow()
 
     // Create ScrolledWindow
     scwindow = new Gtk::ScrolledWindow();
-    //viewport = new Gtk::Viewport(hadjustment, vadjustment);
-    //scwindow->add(*viewport);
-    //scwindow->set_hexpand(true);
-    //scwindow->set_vexpand(true);
-    //scwindow->set_size_request(300, 300);
     scwindow->set_policy(Gtk::PolicyType::POLICY_ALWAYS, Gtk::PolicyType::POLICY_ALWAYS);
+
 
     // Create DrawingArea and add to ScrolledWindow
     drawarea = new Gtk::DrawingArea();
-    drawarea->set_size_request(500, 500);
+    drawarea->set_size_request(2000, 2000);
 
     // Add each other
     scwindow->add(*drawarea);
     this->add(*scwindow);
 
-    // Signals
+    this->show_all_children();
 
+    // Signals
+    drawarea->signal_draw().connect(sigc::mem_fun(this, &PianorollWindow::drawarea_on_draw));
 }
 
 PianorollWindow::~PianorollWindow()
@@ -73,7 +71,12 @@ PianorollWindow::~PianorollWindow()
 
 bool PianorollWindow::on_motion_notify_event(GdkEventMotion *motion_event)
 {
-    std::cout << "Motion event!: " << motion_event->x << ", " << motion_event->y << std::endl;
+    MidiNote note = {
+        int(127 - motion_event->y),
+        1,
+        int(motion_event->x)
+    };
+    this->add_note(note);
     return true;
 }
 
@@ -104,11 +107,13 @@ void PianorollWindow::add_note(MidiNote note)
     notes.push_back(note);
 }
 
-bool PianorollWindow::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
+bool PianorollWindow::drawarea_on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 {
     Gtk::Allocation allocation = get_allocation();
     const int width = allocation.get_width();
     const int height = allocation.get_height();
+
+    draw_timeline(cr);
 
     cr->translate(0, pianoroll_upmargin);
 
@@ -119,13 +124,15 @@ bool PianorollWindow::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
     draw_gridhelper(cr);
 
     // Set background color
-    cr->set_source_rgba(0.86, 0.86, 0.86, 0.8);
+    /*cr->set_source_rgba(0.86, 0.86, 0.86, 0.8);
     cr->rectangle(0, 0, width, height);
-    cr->fill();
+    cr->fill();*/
 
 
     calculate_note_positions();
     update_notes_drawing(cr);
+
+    drawarea->set_size_request(2000, 2000);
 
     return true;
 }
@@ -160,7 +167,7 @@ void PianorollWindow::draw_keyboard(const Cairo::RefPtr<Cairo::Context>& cr)
 
     int black_index = 2;
     // Draw the rest of the black keys
-    for (int i=0; i<53; i++) {
+    for (int i=0; i<63; i++) {
         if (black_index == 3) {
             black_index++;
             continue;
@@ -185,8 +192,9 @@ void PianorollWindow::draw_gridhelper(const Cairo::RefPtr<Cairo::Context>& cr)
     const double key_height = white_height * 7 / 12;
     const double pianoroll_width = window_width - white_width;
 
-    cr->set_source_rgba(1, 1, 1, 1);
+    cr->set_source_rgba(1, 1, 1, 0.8);
     cr->set_line_width(1.3);
+    cr->save();
 
     double last_base_white = -2 * white_height;
     int key_index = 3;
@@ -197,14 +205,18 @@ void PianorollWindow::draw_gridhelper(const Cairo::RefPtr<Cairo::Context>& cr)
             octave_index++;
             continue;
         } else if (key_index == 0) {
+            cr->set_source_rgba(0.2, 0.2, 0.2, 1);
+            cr->set_line_width(2);
             last_base_white = (7 * octave_index - 2) * white_height;
             cr->rectangle(0, last_base_white, pianoroll_width, key_height);
-            std::cout << "set: " << last_base_white << std::endl;
+            //std::cout << "set: " << last_base_white << std::endl;
             key_heights[i] = last_base_white;
+            cr->restore();
+            cr->save();
         } else {
             double y = last_base_white + key_height * key_index;
             cr->rectangle(0, y, pianoroll_width, key_height);
-            std::cout << "set: " << y << std::endl;
+            //std::cout << "set: " << y << std::endl;
             key_heights[i] = y;
         }
         cr->stroke();
@@ -225,4 +237,33 @@ void PianorollWindow::calculate_note_positions()
         DrawCord cord = DrawCord {note.start * measure_width / measure_division, key_heights[127-note.note], note.length * measure_width / measure_division};
         this->note_drawed.push(cord);
     }
+}
+
+void PianorollWindow::draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr)
+{
+    Gtk::Allocation allocation = get_allocation();
+    const double height = allocation.get_height();
+    const double width = allocation.get_width();
+    const double left_margin = pianoroll_leftmargin + white_width;
+    const double interval = measure_width / measure_division;
+
+    cr->set_source_rgba(0.4, 0.4, 0.4, 1);
+    cr->set_line_width(1);
+    cr->save();
+
+    int i = 0;
+    double start;
+    do {
+        if (i % measure_division == 0) {
+            cr->set_line_width(2);
+            cr->set_source_rgba(0, 0, 1, 1);
+        }
+        start = left_margin + i * interval;
+        cr->move_to(start, 0);
+        cr->line_to(start, height);
+        cr->stroke();
+        cr->restore();
+        cr->save();
+        i++;
+    } while (start < width);
 }

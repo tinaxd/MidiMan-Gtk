@@ -1,4 +1,4 @@
-/* midiman-window.h
+/* pianoroll-winow.h
  *
  * Copyright 2019 tinaxd
  *
@@ -69,7 +69,7 @@ Gtk::DrawingArea *drawarea;
 Gtk::ScrolledWindow *scwindow;
 Gtk::Viewport *viewport;
 
-bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
+bool drawarea_on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 //std::queue<DrawCord> drawing_queue;
 
 std::queue<DrawCord> note_drawed;
@@ -88,6 +88,7 @@ void draw_note(MidiNote note);
 virtual void update_notes_drawing(const Cairo::RefPtr<Cairo::Context>& cr);
 virtual void draw_keyboard(const Cairo::RefPtr<Cairo::Context>& cr);
 virtual void draw_gridhelper(const Cairo::RefPtr<Cairo::Context>& cr);
+virtual void draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr);
 
 double white_width = 60;
 double white_height = 30;
