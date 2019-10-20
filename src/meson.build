@@ -5,10 +5,11 @@ midiman_sources = [
 ]
 
 midifile_proj = subproject('midifile')
+midifile_dep = midifile_proj.get_variable('libmidifile_dep')
 
 midiman_deps = [
   dependency('gtkmm-3.0', version: '>= 3.18'),
-  midifile_proj.get_variable('libmidifile_dep')
+  midifile_dep
 ]
 
 gnome = import('gnome')

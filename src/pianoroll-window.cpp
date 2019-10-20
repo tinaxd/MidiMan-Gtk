@@ -35,6 +35,10 @@
 #include <gtkmm/drawingarea.h>
 #include <gtkmm/adjustment.h>
 
+#define QUARTER_LENGTH (measure_width / measure_division)
+
+#define WHITE_KEYS 75
+
 PianorollWindow::PianorollWindow()
 {
     this->set_title("Pianoroll");
@@ -62,6 +66,8 @@ PianorollWindow::PianorollWindow()
 
     // Signals
     drawarea->signal_draw().connect(sigc::mem_fun(this, &PianorollWindow::drawarea_on_draw));
+    scwindow->get_hadjustment()->signal_value_changed().connect(sigc::mem_fun(this, &PianorollWindow::request_redraw));
+    scwindow->get_vadjustment()->signal_value_changed().connect(sigc::mem_fun(this, &PianorollWindow::request_redraw));
 }
 
 PianorollWindow::~PianorollWindow()
@@ -76,7 +82,7 @@ bool PianorollWindow::on_motion_notify_event(GdkEventMotion *motion_event)
         1,
         int(motion_event->x)
     };
-    this->add_note(note);
+    //this->add_note(note);
     return true;
 }
 
@@ -88,13 +94,12 @@ void PianorollWindow::draw_note(MidiNote note)
 void PianorollWindow::update_notes_drawing(const Cairo::RefPtr<Cairo::Context> &cr)
 {
     cr->set_source_rgba(1, 0, 0, 1);
-    cr->save();
     const double key_height = white_height * 7 / 12;
 
     while (!note_drawed.empty())
     {
         DrawCord cord = note_drawed.front();
-        std::cout << "Cord: " << cord.x << ", " << cord.y << std::endl;
+        //std::cout << "Cord: " << cord.x << ", " << cord.y << std::endl;
         cr->rectangle(cord.x, cord.y, cord.length, key_height);
         cr->fill();
 
@@ -109,33 +114,64 @@ void PianorollWindow::add_note(MidiNote note)
 
 bool PianorollWindow::drawarea_on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 {
-    Gtk::Allocation allocation = get_allocation();
-    const int width = allocation.get_width();
-    const int height = allocation.get_height();
+    /*auto allocation = get_allocation();
+    const double window_width = allocation.get_width();
+    const double window_height = allocation.get_height();*/
 
+    auto hadjustment = scwindow->get_hadjustment();
+    auto vadjustment = scwindow->get_vadjustment();
+    const double left_up_x = hadjustment->get_value();
+    const double left_up_y = vadjustment->get_value();
+
+    // Sync with vertical scroll
+    cr->translate(0, left_up_y);
     draw_timeline(cr);
-
-    cr->translate(0, pianoroll_upmargin);
-
+    cr->translate(0, -left_up_y);
+    
+    // Sync with horizontal scroll
+    cr->translate(left_up_x, pianoroll_upmargin);
     draw_keyboard(cr);
-
     cr->translate(pianoroll_leftmargin + white_width, 0);
-
     draw_gridhelper(cr);
+
+
 
     // Set background color
     /*cr->set_source_rgba(0.86, 0.86, 0.86, 0.8);
     cr->rectangle(0, 0, width, height);
     cr->fill();*/
 
-
+    // Do not sync with scroll
+    cr->translate(-left_up_x, 0);
     calculate_note_positions();
     update_notes_drawing(cr);
 
-    drawarea->set_size_request(2000, 2000);
+    //drawarea->set_size_request(2000, 2000);
+    //drawarea->queue_draw_area(left_up_x, left_up_y, window_width, window_height);
 
     return true;
 }
+
+void PianorollWindow::request_redraw()
+{
+    auto allocation = get_allocation();
+    const double window_width = allocation.get_width();
+    const double window_height = allocation.get_height();
+
+    auto hadjustment = scwindow->get_hadjustment();
+    auto vadjustment = scwindow->get_vadjustment();
+    const double left_up_x = hadjustment->get_value();
+    const double left_up_y = vadjustment->get_value();
+    
+    drawarea->queue_draw_area(left_up_x, left_up_y, window_width, window_height);
+}
+
+/*
+bool PianorollWindow::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
+{
+
+}
+*/
 
 void PianorollWindow::set_x_scale(double scale)
 {
@@ -150,14 +186,23 @@ void PianorollWindow::set_y_scale(double scale)
 void PianorollWindow::draw_keyboard(const Cairo::RefPtr<Cairo::Context>& cr)
 {
     cr->set_line_width(1);
+    cr->set_font_size(13);
     // Draw white keys
-    for (int i=0; i<127; i++) {
+    for (int i=0; i<WHITE_KEYS-1; i++) {
         cr->set_source_rgba(0, 0, 0, 1);
         cr->rectangle(0, i * white_height, white_width, white_height);
         cr->stroke();
         cr->rectangle(0, i * white_height, white_width, white_height);
         cr->set_source_rgba(1, 1, 1, 1);
         cr->fill();
+        if ((i-4) % 7 == 0) {
+            cr->set_source_rgba(0, 0, 0, 1);
+            cr->move_to(white_width/2+2, (i+1) * white_height - 5);
+            int index = (i-4) / 7;
+            char str[4];
+            sprintf(str, "C%d", 9-index);
+            cr->show_text(str);
+        }
     }
 
     // Draw (the half of) the first black key
@@ -167,7 +212,7 @@ void PianorollWindow::draw_keyboard(const Cairo::RefPtr<Cairo::Context>& cr)
 
     int black_index = 2;
     // Draw the rest of the black keys
-    for (int i=0; i<63; i++) {
+    for (int i=0; i<53; i++) {
         if (black_index == 3) {
             black_index++;
             continue;
@@ -185,12 +230,8 @@ void PianorollWindow::draw_keyboard(const Cairo::RefPtr<Cairo::Context>& cr)
 
 void PianorollWindow::draw_gridhelper(const Cairo::RefPtr<Cairo::Context>& cr)
 {
-    Gtk::Allocation allocation = get_allocation();
-    const int window_width = allocation.get_width();
-    const int window_height = allocation.get_height();
-
     const double key_height = white_height * 7 / 12;
-    const double pianoroll_width = window_width - white_width;
+    const double pianoroll_width = max_width - white_width;
 
     cr->set_source_rgba(1, 1, 1, 0.8);
     cr->set_line_width(1.3);
@@ -225,7 +266,7 @@ void PianorollWindow::draw_gridhelper(const Cairo::RefPtr<Cairo::Context>& cr)
     }
 
     cr->move_to(0, 0);
-    cr->line_to(0, window_height);
+    cr->line_to(0, WHITE_KEYS * white_height);
     cr->stroke();
 }
 
@@ -233,32 +274,42 @@ void PianorollWindow::calculate_note_positions()
 {
     for (auto it=notes.begin(); it!=notes.end(); it++) {
         auto note = *it;
-        std::cout << key_heights[127-note.note] << std::endl;
-        DrawCord cord = DrawCord {note.start * measure_width / measure_division, key_heights[127-note.note], note.length * measure_width / measure_division};
+        //std::cout << key_heights[127-note.note] << std::endl;
+        DrawCord cord = DrawCord {note.start / resolution * QUARTER_LENGTH, key_heights[127-note.note], note.length / resolution * QUARTER_LENGTH};
         this->note_drawed.push(cord);
     }
 }
 
 void PianorollWindow::draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr)
 {
-    Gtk::Allocation allocation = get_allocation();
-    const double height = allocation.get_height();
-    const double width = allocation.get_width();
+    //Gtk::Allocation allocation = get_allocation();
+    //const double height = allocation.get_height();
+    const double height = WHITE_KEYS * white_height;
+    const double width = max_width;
     const double left_margin = pianoroll_leftmargin + white_width;
     const double interval = measure_width / measure_division;
 
     cr->set_source_rgba(0.4, 0.4, 0.4, 1);
     cr->set_line_width(1);
+    cr->set_font_size(20);
     cr->save();
 
     int i = 0;
     double start;
     do {
+        start = left_margin + i * interval;
+
         if (i % measure_division == 0) {
+            char measures[5];
+            sprintf(measures, "%d", i / measure_division + 1);
+            cr->move_to(start, pianoroll_upmargin);
+            cr->show_text(measures);
+
+            cr->move_to(start, 0);
             cr->set_line_width(2);
             cr->set_source_rgba(0, 0, 1, 1);
         }
-        start = left_margin + i * interval;
+        
         cr->move_to(start, 0);
         cr->line_to(start, height);
         cr->stroke();
@@ -293,5 +344,8 @@ void PianorollWindow::add_midi_note(smf::MidiEvent event)
         };
         notes.push_back(note);
         _note_tmp[key].pop();
+        std::cout << "New note! note: " << key << " time(tick): " << on_event.tick << "(length " << event.tick - on_event.tick << ")" << std::endl;
+        if (event.tick > max_width)
+            max_width = event.tick;
     }
 }

@@ -8,6 +8,7 @@ project('midiman', ['cpp', 'c'],
 
 i18n = import('i18n')
 
+run_command('python3', 'pre.py')
 
 subdir('data')
 subdir('src')

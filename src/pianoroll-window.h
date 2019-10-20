@@ -71,6 +71,8 @@ void calculate_note_positions();
 void reset_with_notes(smf::MidiEventList event_list);
 void add_midi_note(smf::MidiEvent event);
 
+void request_redraw();
+
 private:
 // Vector<MidiEvent> midiInfo;
 Gtk::DrawingArea *drawarea;
@@ -78,6 +80,7 @@ Gtk::ScrolledWindow *scwindow;
 Gtk::Viewport *viewport;
 
 bool drawarea_on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
+//bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 //std::queue<DrawCord> drawing_queue;
 
 std::queue<DrawCord> note_drawed;
@@ -91,6 +94,9 @@ double y_scale = 5.0;
 double x_scale = 5.0;
 
 double key_heights[127];
+
+int resolution = 480;
+double tempo = 120;
 
 protected:
 virtual bool on_motion_notify_event(GdkEventMotion *motion_event);
@@ -106,6 +112,8 @@ double black_width = 25;
 double black_height = 20;
 double pianoroll_leftmargin = 5;
 double pianoroll_upmargin = 25;
+
+double max_width = 100;
 
 int measure_division = 4;
 double measure_width = 300;

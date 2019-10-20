@@ -74,8 +74,28 @@ void MidimanWindow::on_startbutton_clicked()
     pianoroll->add_note(note4);*/
 
     smf::MidiFile midifile;
-    midifile.read("../Haydn_psonata37_1_1.mid");
+    midifile.read("./simplemidi.mid");
     midifile.doTimeAnalysis();
-    pianoroll->reset_with_notes(midifile[0]);
+    std::cout << "Tracks: " << midifile.getTrackCount() << std::endl;
+    std::cout << "TPQ: " << midifile.getTicksPerQuarterNote() << std::endl;
+
+    for (int track=0; track<midifile.getTrackCount(); track++) {
+      if (midifile.getTrackCount() > 1) std::cout << "\nTrack " << track << std::endl;
+      std::cout << "Tick\tSeconds\tDur\tMessage" << std::endl;
+      for (int event=0; event<midifile[track].size(); event++) {
+         std::cout << std::dec << midifile[track][event].tick;
+         std::cout << '\t' << std::dec << midifile[track][event].seconds;
+         std::cout << '\t';
+         if (midifile[track][event].isNoteOn())
+            std::cout << midifile[track][event].getDurationInSeconds();
+         std::cout << '\t' << std::hex;
+         for (int i=0; i<midifile[track][event].size(); i++)
+            std::cout << (int)midifile[track][event][i] << ' ';
+         std::cout << std::endl;
+      }
+  }
+
+
+    pianoroll->reset_with_notes(midifile[2]);
     pianoroll->show();
 }

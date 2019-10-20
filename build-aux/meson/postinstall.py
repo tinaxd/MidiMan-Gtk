@@ -2,6 +2,7 @@
 
 from os import environ, path
 from subprocess import call
+import shutil
 
 prefix = environ.get('MESON_INSTALL_PREFIX', '/usr/local')
 datadir = path.join(prefix, 'share')
@@ -17,5 +18,3 @@ if not destdir:
 
     print('Compiling GSettings schemas...')
     call(['glib-compile-schemas', path.join(datadir, 'glib-2.0', 'schemas')])
-
-
