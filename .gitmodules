@@ -1,3 +1,3 @@
-[submodule "external/midifile"]
+[submodule "subprojects/midifile"]
 	path = subprojects/midifile
 	url = https://github.com/craigsapp/midifile
