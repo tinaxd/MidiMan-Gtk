@@ -74,7 +74,7 @@ void MidimanWindow::on_startbutton_clicked()
     pianoroll->add_note(note4);*/
 
     smf::MidiFile midifile;
-    midifile.read("./simplemidi.mid");
+    midifile.read("./cola-kisu.mid");
     midifile.doTimeAnalysis();
     std::cout << "Tracks: " << midifile.getTrackCount() << std::endl;
     std::cout << "TPQ: " << midifile.getTicksPerQuarterNote() << std::endl;
@@ -82,6 +82,7 @@ void MidimanWindow::on_startbutton_clicked()
     for (int track=0; track<midifile.getTrackCount(); track++) {
       if (midifile.getTrackCount() > 1) std::cout << "\nTrack " << track << std::endl;
       std::cout << "Tick\tSeconds\tDur\tMessage" << std::endl;
+      /*
       for (int event=0; event<midifile[track].size(); event++) {
          std::cout << std::dec << midifile[track][event].tick;
          std::cout << '\t' << std::dec << midifile[track][event].seconds;
@@ -92,7 +93,7 @@ void MidimanWindow::on_startbutton_clicked()
          for (int i=0; i<midifile[track][event].size(); i++)
             std::cout << (int)midifile[track][event][i] << ' ';
          std::cout << std::endl;
-      }
+      }*/
   }
 
 

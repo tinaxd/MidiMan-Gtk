@@ -53,26 +53,59 @@ PianorollWindow::PianorollWindow()
     scwindow = new Gtk::ScrolledWindow();
     scwindow->set_policy(Gtk::PolicyType::POLICY_ALWAYS, Gtk::PolicyType::POLICY_ALWAYS);
 
+    scautomation = new Gtk::ScrolledWindow();
 
     // Create DrawingArea and add to ScrolledWindow
     drawarea = new Gtk::DrawingArea();
-    drawarea->set_size_request(2000, 2000);
+    drawarea->set_size_request(100, white_height * WHITE_KEYS);
+
+    automation = new Gtk::DrawingArea();
+    automation->set_size_request(100, 100);
+
+    // Create Paned
+    paned = new Gtk::Paned(Gtk::ORIENTATION_VERTICAL);
+    automation_box = new Gtk::Box(Gtk::ORIENTATION_VERTICAL, 0);
+    automation_toolbar = new Gtk::Toolbar();
+
+    // Toolbar
+    automation_test_button = new Gtk::ToolButton("FOO");
+
+    automation_toolbar->insert(*automation_test_button, 0);
 
     // Add each other
     scwindow->add(*drawarea);
-    this->add(*scwindow);
+    paned->add1(*scwindow);
+    paned->add2(*automation_box);
+    automation_box->pack_start(*automation_toolbar, false, false);
+    automation_box->pack_end(*automation, true, true);
+    this->add(*paned);
 
     this->show_all_children();
 
     // Signals
     drawarea->signal_draw().connect(sigc::mem_fun(this, &PianorollWindow::drawarea_on_draw));
     scwindow->get_hadjustment()->signal_value_changed().connect(sigc::mem_fun(this, &PianorollWindow::request_redraw));
+    scwindow->get_hadjustment()->signal_value_changed().connect(sigc::mem_fun(this, &PianorollWindow::request_automation_redraw));
     scwindow->get_vadjustment()->signal_value_changed().connect(sigc::mem_fun(this, &PianorollWindow::request_redraw));
+
+    automation->signal_draw().connect(sigc::mem_fun(this, &PianorollWindow::automation_on_draw));
+
+    // Utilities
+    
+    automation_drawed = new std::priority_queue<DrawCord, std::vector<DrawCord>, decltype(drawcord_comp)>(drawcord_comp);
+    
 }
 
 PianorollWindow::~PianorollWindow()
 {
+    delete automation;
     delete drawarea;
+    delete viewport;
+    delete scwindow;
+    delete automation_toolbar;
+    delete automation_box;
+    delete paned;
+    delete automation_drawed;
 }
 
 bool PianorollWindow::on_motion_notify_event(GdkEventMotion *motion_event)
@@ -152,6 +185,21 @@ bool PianorollWindow::drawarea_on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
     return true;
 }
 
+bool PianorollWindow::automation_on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
+{
+    auto hadjustment = scwindow->get_hadjustment();
+    //auto vadjustment = scwindow->get_vadjustment();
+    const double left_up_x = hadjustment->get_value();
+    //const double left_up_y = vadjustment->get_value();
+
+    cr->translate(pianoroll_leftmargin + white_width - left_up_x, 0);
+
+    automation_draw_timeline(cr);
+
+    calculate_automation_graph();
+    automation_draw_graph(cr);
+}
+
 void PianorollWindow::request_redraw()
 {
     auto allocation = get_allocation();
@@ -164,6 +212,11 @@ void PianorollWindow::request_redraw()
     const double left_up_y = vadjustment->get_value();
     
     drawarea->queue_draw_area(left_up_x, left_up_y, window_width, window_height);
+}
+
+void PianorollWindow::request_automation_redraw()
+{
+    automation->queue_draw();
 }
 
 /*
@@ -280,6 +333,21 @@ void PianorollWindow::calculate_note_positions()
     }
 }
 
+void PianorollWindow::calculate_automation_graph()
+{
+    auto automation_allocation = automation->get_allocation();
+    const double height = automation_allocation.get_height();
+
+    for (auto it=automation_values.begin(); it!=automation_values.end(); it++) {
+        auto am = *it;
+        double x = am.tick / resolution * QUARTER_LENGTH;
+        double y = (127.0 - am.value) / 127.0 * height;
+        //std::cout << "x: " << x << " y: " << y << std::endl;
+        DrawCord cord = DrawCord {x, y, 0};
+        this->automation_drawed->push(cord);
+    }
+}
+
 void PianorollWindow::draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr)
 {
     //Gtk::Allocation allocation = get_allocation();
@@ -319,6 +387,70 @@ void PianorollWindow::draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr)
     } while (start < width);
 }
 
+void PianorollWindow::automation_draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr)
+{
+    Gtk::Allocation allocation = get_allocation();
+    const double height = allocation.get_height();
+    const double width = max_width;
+    //const double left_margin = pianoroll_leftmargin + white_width;
+    const double interval = measure_width / measure_division;
+
+    cr->set_source_rgba(0.4, 0.4, 0.4, 1);
+    cr->set_line_width(1);
+    cr->set_font_size(20);
+    cr->save();
+
+    int i = 0;
+    double start;
+    do {
+        start = i * interval;
+
+        if (i % measure_division == 0) {
+            char measures[5];
+            sprintf(measures, "%d", i / measure_division + 1);
+            cr->move_to(start, pianoroll_upmargin);
+            cr->show_text(measures);
+
+            cr->move_to(start, 0);
+            cr->set_line_width(2);
+            cr->set_source_rgba(0, 0, 1, 1);
+        }
+        
+        cr->move_to(start, 0);
+        cr->line_to(start, height);
+        cr->stroke();
+        cr->restore();
+        cr->save();
+        i++;
+    } while (start < width);
+}
+
+void PianorollWindow::automation_draw_graph(const Cairo::RefPtr<Cairo::Context>& cr)
+{
+    cr->set_source_rgba(0.2, 1, 0.2, 1);
+    cr->set_line_width(3.5);
+    //std::cout << "size: " << automation_drawed->size() << std::endl;
+    while (!automation_drawed->empty()) {
+        auto cord = automation_drawed->top();
+        automation_drawed->pop();
+
+        DrawCord cord_to;
+        if (automation_drawed->empty()) {
+            cord_to = DrawCord {max_width, cord.y, 0};
+        } else {
+            cord_to = automation_drawed->top();
+            //automation_drawed->pop(); // fix
+        }
+
+        //std::cout << "(" << cord.x << ", " << cord.y << ") to (" << cord_to.x << ", " << cord_to.y << ")" << std::endl;
+
+        cr->move_to(cord.x, cord.y);
+        cr->line_to(cord_to.x, cord_to.y);
+        cr->stroke();
+    }
+    //std::cout << max_width << std::endl;
+}
+
 void PianorollWindow::reset_with_notes(smf::MidiEventList event_list)
 {
     for (int i=0; i<event_list.size(); i++) {
@@ -331,6 +463,7 @@ void PianorollWindow::add_midi_note(smf::MidiEvent event)
     if (event.isNoteOn()) {
         short key = event[1];
         short velocity = event[2];
+        //std::cout << "raw velocity: " << velocity << std::endl;
         _note_tmp[key].push(event);
     } else if (event.isNoteOff()) {
         if (_note_tmp.empty())
@@ -344,8 +477,24 @@ void PianorollWindow::add_midi_note(smf::MidiEvent event)
         };
         notes.push_back(note);
         _note_tmp[key].pop();
-        std::cout << "New note! note: " << key << " time(tick): " << on_event.tick << "(length " << event.tick - on_event.tick << ")" << std::endl;
-        if (event.tick > max_width)
-            max_width = event.tick;
+        //std::cout << "New note! note: " << key << " time(tick): " << on_event.tick << "(length " << event.tick - on_event.tick << ")" << std::endl;
+
+        AutomationPoint ap = {
+            on_event[2], // velocity
+            on_event.tick,
+        };
+        automation_values.push_back(ap);
+        //std::cout << "New AutoPoint! time(tick): " << on_event.tick << " value: " << on_event[2] << std::endl;
+
+        if (event.tick > max_width) {
+            max_width = event.tick / resolution * QUARTER_LENGTH;
+            update_size_request();
+        }
     }
+}
+
+void PianorollWindow::update_size_request()
+{
+    const double left_margin = white_width + pianoroll_leftmargin;
+    drawarea->set_size_request(left_margin + max_width, white_height * WHITE_KEYS);
 }

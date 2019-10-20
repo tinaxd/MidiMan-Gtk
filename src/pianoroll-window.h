@@ -33,6 +33,10 @@
 #include <gtkmm/drawingarea.h>
 #include <gtkmm/scrolledwindow.h>
 #include <gtkmm/viewport.h>
+#include <gtkmm/paned.h>
+#include <gtkmm/box.h>
+#include <gtkmm/toolbar.h>
+#include <gtkmm/toolbutton.h>
 
 #include <queue>
 #include <vector>
@@ -56,6 +60,16 @@ struct DrawCord
   double length;
 };
 
+struct AutomationPoint
+{
+	int value;
+	int tick;
+};
+
+auto drawcord_comp = [](DrawCord x, DrawCord y) {
+            return x.x > y.x;
+};
+
 class PianorollWindow: public Gtk::Window
 {
 public:
@@ -67,11 +81,15 @@ void set_x_scale(double scale);
 void set_y_scale(double scale);
 
 void calculate_note_positions();
+void calculate_automation_graph();
 
 void reset_with_notes(smf::MidiEventList event_list);
 void add_midi_note(smf::MidiEvent event);
 
 void request_redraw();
+void request_automation_redraw();
+
+void update_size_request();
 
 private:
 // Vector<MidiEvent> midiInfo;
@@ -79,14 +97,26 @@ Gtk::DrawingArea *drawarea;
 Gtk::ScrolledWindow *scwindow;
 Gtk::Viewport *viewport;
 
+Gtk::Paned *paned;
+Gtk::DrawingArea *automation;
+Gtk::ScrolledWindow *scautomation;
+Gtk::Box *automation_box;
+Gtk::Toolbar *automation_toolbar;
+
+Gtk::ToolButton *automation_test_button;
+
 bool drawarea_on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
+bool automation_on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 //bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 //std::queue<DrawCord> drawing_queue;
 
 std::queue<DrawCord> note_drawed;
+//std::priority_queue<DrawCord> *automation_drawed;
+std::priority_queue<DrawCord, std::vector<DrawCord>, decltype(drawcord_comp)> *automation_drawed;
 std::array<std::stack<smf::MidiEvent>, 128> _note_tmp;
 
 std::vector<MidiNote> notes;
+std::vector<AutomationPoint> automation_values;
 
 bool draw_initialized;
 
@@ -105,6 +135,9 @@ virtual void update_notes_drawing(const Cairo::RefPtr<Cairo::Context>& cr);
 virtual void draw_keyboard(const Cairo::RefPtr<Cairo::Context>& cr);
 virtual void draw_gridhelper(const Cairo::RefPtr<Cairo::Context>& cr);
 virtual void draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr);
+
+virtual void automation_draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr);
+virtual void automation_draw_graph(const Cairo::RefPtr<Cairo::Context>& cr);
 
 double white_width = 60;
 double white_height = 30;
