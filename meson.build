@@ -9,7 +9,6 @@ project('midiman', ['cpp', 'c'],
 i18n = import('i18n')
 
 
-subdir('external')
 subdir('data')
 subdir('src')
 subdir('po')

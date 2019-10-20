@@ -4,8 +4,11 @@ midiman_sources = [
   'pianoroll-window.cpp'
 ]
 
+midifile_proj = subproject('midifile')
+
 midiman_deps = [
   dependency('gtkmm-3.0', version: '>= 3.18'),
+  midifile_proj.get_variable('libmidifile_dep')
 ]
 
 gnome = import('gnome')

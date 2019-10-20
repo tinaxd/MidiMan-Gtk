@@ -30,6 +30,9 @@
 #include "midiman-window.h"
 #include "pianoroll-window.h"
 
+#include "../subprojects/midifile/include/MidiFile.h"
+#include "../subprojects/midifile/include/MidiEventList.h"
+
 #include <iostream>
 
 MidimanWindow::MidimanWindow()
@@ -52,6 +55,7 @@ void MidimanWindow::on_startbutton_clicked()
 {
     std::cout << "startbutton clicked" << std::endl;
     PianorollWindow *pianoroll = new PianorollWindow();
+    /*
     MidiNote note = {
         96, 1, 0
     };
@@ -67,6 +71,11 @@ void MidimanWindow::on_startbutton_clicked()
     pianoroll->add_note(note);
     pianoroll->add_note(note2);
     pianoroll->add_note(note3);
-    pianoroll->add_note(note4);
+    pianoroll->add_note(note4);*/
+
+    smf::MidiFile midifile;
+    midifile.read("../Haydn_psonata37_1_1.mid");
+    midifile.doTimeAnalysis();
+    pianoroll->reset_with_notes(midifile[0]);
     pianoroll->show();
 }

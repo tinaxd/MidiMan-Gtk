@@ -267,3 +267,31 @@ void PianorollWindow::draw_timeline(const Cairo::RefPtr<Cairo::Context>& cr)
         i++;
     } while (start < width);
 }
+
+void PianorollWindow::reset_with_notes(smf::MidiEventList event_list)
+{
+    for (int i=0; i<event_list.size(); i++) {
+        add_midi_note(event_list[i]);
+    }
+}
+
+void PianorollWindow::add_midi_note(smf::MidiEvent event)
+{
+    if (event.isNoteOn()) {
+        short key = event[1];
+        short velocity = event[2];
+        _note_tmp[key].push(event);
+    } else if (event.isNoteOff()) {
+        if (_note_tmp.empty())
+            return;
+        short key = event[1];
+        smf::MidiEvent on_event = _note_tmp[key].top();
+        MidiNote note = {
+            key,
+            event.tick - on_event.tick,
+            on_event.tick,
+        };
+        notes.push_back(note);
+        _note_tmp[key].pop();
+    }
+}

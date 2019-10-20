@@ -36,6 +36,11 @@
 
 #include <queue>
 #include <vector>
+#include <stack>
+#include <array>
+
+#include "../subprojects/midifile/include/MidiEventList.h"
+
 
 struct MidiNote
 {
@@ -63,6 +68,9 @@ void set_y_scale(double scale);
 
 void calculate_note_positions();
 
+void reset_with_notes(smf::MidiEventList event_list);
+void add_midi_note(smf::MidiEvent event);
+
 private:
 // Vector<MidiEvent> midiInfo;
 Gtk::DrawingArea *drawarea;
@@ -73,6 +81,8 @@ bool drawarea_on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 //std::queue<DrawCord> drawing_queue;
 
 std::queue<DrawCord> note_drawed;
+std::array<std::stack<smf::MidiEvent>, 128> _note_tmp;
+
 std::vector<MidiNote> notes;
 
 bool draw_initialized;
