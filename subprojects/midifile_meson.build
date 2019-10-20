@@ -1,0 +1,9 @@
+project('libmidifile', 'cpp')
+
+inc = include_directories('include')
+libmidifile = shared_library('midifile', 'src/Binasc.cpp', 'src/MidiEvent.cpp', 'src/MidiEventList.cpp', 'src/MidiFile.cpp', 'src/MidiMessage.cpp', 'src/Options.cpp',
+	include_directories: inc
+)
+
+libmidifile_dep = declare_dependency(include_directories : inc, link_with : libmidifile)
+
